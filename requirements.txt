@@ -4,5 +4,6 @@ Flask-Login==0.6.3
 Werkzeug==2.3.7
 python-dotenv==1.0.0
 Pillow==10.0.0
-redis==5.0.10
+redis==5.0.4
 Flask-Limiter==2.9.0
+gunicorn
