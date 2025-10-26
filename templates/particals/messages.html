@@ -1,0 +1,61 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                    {{ message }}
+                    <span class="close-flash" onclick="this.parentElement.remove()">&times;</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<style>
+    .flash-messages {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        max-width: 300px;
+    }
+    .flash-message {
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 8px;
+        color: white;
+        position: relative;
+        animation: slideInRight 0.3s ease;
+    }
+    .flash-message.success {
+        background: var(--green);
+    }
+    .flash-message.error {
+        background: var(--red);
+    }
+    .flash-message.warning {
+        background: var(--yellow);
+        color: var(--black);
+    }
+    .close-flash {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @media (max-width: 768px) {
+        .flash-messages {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+    }
+</style>

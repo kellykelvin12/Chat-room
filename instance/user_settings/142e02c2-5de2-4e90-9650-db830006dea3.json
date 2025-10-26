@@ -1,0 +1,15 @@
+{
+  "topics": {
+    "topic:1c218cde-9885-4b0f-a7b1-32e09eaa5756": {
+      "identity": true,
+      "voice": "normal",
+      "remember": true
+    },
+    "topic:c1497b23-ad6e-4768-91f0-918e091950a8": {
+      "identity": false,
+      "voice": "deep",
+      "remember": true
+    }
+  },
+  "global": null
+}

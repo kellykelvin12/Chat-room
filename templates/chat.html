@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Chat - Gossip of Athi River Secondary School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gossip of Athi River Secondary School</h1>
+            <h2>Created by People who want to know the truth</h2>
+            <p class="tagline">Welcome, {{ current_user.name }}! ({{ current_user.class_name }})</p>
+        </header>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="showSection('topics')">📝 Topics</div>
+            <div class="nav-tab">
+                <a href="{{ url_for('relationships') }}" style="color: white; text-decoration: none;">💑 Relationships</a>
+            </div>
+            <div class="nav-tab">
+                <a href="{{ url_for('rewards') }}" style="color: white; text-decoration: none;">🎁 Rewards</a>
+            </div>
+            <div class="nav-tab">
+                <a href="{{ url_for('breaking') }}" style="color: white; text-decoration: none;">🗞️ Breaking News</a>
+            </div>
+            <div class="nav-tab" style="position:relative;">
+                <a href="{{ url_for('private_start') }}" style="color: white; text-decoration: none;">💬 Talk to Admin
+                    <span id="user-support-badge" style="display:inline-block;min-width:22px;padding:2px 6px;background:#e74c3c;color:#fff;border-radius:12px;font-size:0.9em;vertical-align:middle;margin-left:6px;{% if unread_private_count == 0 %}display:none;{% endif %}">
+                        {{ unread_private_count if unread_private_count > 0 else '' }}
+                    </span>
+                </a>
+            </div>
+            <div class="nav-tab" style="margin-left: auto; flex: 0.4;">
+                <a href="{{ url_for('logout') }}" style="color: white; text-decoration: none;">🚪 Logout</a>
+            </div>
+        </div>
+
+        <!-- Topics Section -->
+        <div id="topics" class="section active">
+            <div class="topics-header">
+                <h3>Discussion Topics</h3>
+                <button onclick="createTopic()" class="btn-success" style="margin-bottom: 15px;">
+                    ＋ Create New Topic
+                </button>
+            </div>
+            <div class="topics-grid">
+                {% for topic in topics %}
+                    <div class="topic-item" onclick="joinTopic('{{ topic.id }}')">
+                        <span class="lock-dot {% if topic.is_locked %}locked-dot{% else %}unlocked-dot{% endif %}"></span>
+                        <strong>{{ topic.name }}</strong>
+                        <small class="active-badge" style="display:inline-block;color:var(--white);margin-left:8px;" data-active-target="topic:{{ topic.id }}">Active: {{ topic_active_counts[topic.id]|default(0) }} users</small>
+                        {% if topic.description %}
+                            <br><small>{{ topic.description[:50] }}{% if topic.description|length > 50 %}...{% endif %}</small>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="no-topics">
+                        <p>No topics yet. Create the first one!</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Relationships Section -->
+        <div id="relationships" class="section">
+            <div style="text-align: center; padding: 30px;">
+                <h3>💑 Relationship Corner</h3>
+                <p>Share and discuss relationships in our school community</p>
+                <a href="{{ url_for('relationships') }}">
+                    <button class="btn-warning" style="margin: 15px 0;">Enter Relationship Chat</button>
+                </a>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <div style="background: var(--dark-gray); padding: 20px; border-radius: 10px;">
+                        <h4>💕 Currently Dating</h4>
+                        <p>See who's dating whom</p>
+                    </div>
+                    <div style="background: var(--dark-gray); padding: 20px; border-radius: 10px;">
+                        <h4>💔 Rejected</h4>
+                        <p>Recent rejections stories</p>
+                    </div>
+                    <div style="background: var(--dark-gray); padding: 20px; border-radius: 10px;">
+                        <h4>😍 Crushes</h4>
+                        <p>Secret admirers and crushes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rewards Section -->
+        <div id="rewards" class="section">
+            <div style="text-align: center; padding: 30px;">
+                <h3>🎁 Rewards & Prizes</h3>
+                <p>Spin the wheel and claim exciting rewards!</p>
+                <a href="{{ url_for('rewards') }}">
+                    <button class="btn-warning" style="margin: 15px 0;">View My Rewards</button>
+                </a>
+                
+                <div style="background: var(--dark-gray); padding: 20px; border-radius: 10px; margin-top: 20px;">
+                    <h4>🏆 Top Contributors</h4>
+                    <p>Most active users this week:</p>
+                    <ol style="text-align: left; max-width: 300px; margin: 15px auto;">
+                        <li>User123 - 45 messages</li>
+                        <li>ChatterBox - 38 messages</li>
+                        <li>GossipQueen - 32 messages</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="close-modal" onclick="closeImageModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Intercept Talk to Admin link to confirm action
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminLink = Array.from(document.querySelectorAll('a')).find(a => a.getAttribute('href') === "{{ url_for('private_start') }}");
+            if (adminLink) {
+                adminLink.addEventListener('click', function(e) {
+                    if (!confirm('Start a private chat with admins? This will create a support chat.')) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+        function showSection(sectionName) {
+            // Only handle topics section since relationships and rewards are separate pages
+            if (sectionName === 'topics') {
+                document.getElementById('topics').classList.add('active');
+                event.target.classList.add('active');
+            }
+        }
+
+        function createTopic() {
+            const topicName = prompt('Enter topic name:');
+            if (!topicName) return;
+            
+            const description = prompt('Enter topic description (optional):');
+            
+            fetchWithCSRF('/api/create_topic', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: topicName,
+                    description: description
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Topic created successfully!');
+                    location.reload();
+                } else {
+                    alert('Error creating topic: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error creating topic: ' + error);
+            });
+        }
+
+        function joinTopic(topicId) {
+            window.location.href = `/topic/${topicId}`;
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('mobile-open');
+        }
+    </script>
+</body>
+</html>

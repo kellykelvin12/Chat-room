@@ -1,0 +1,27 @@
+Gossip_of_the_River_Complete_Package_v5/
+├── app.py
+├── models.py
+├── utils.py
+├── requirements.txt
+├── config.py
+├── static/
+│   ├── style.css
+│   ├── script.js
+│   ├── uploads/
+│   │   ├── images/
+│   │   └── voice/
+│   └── reward_wheel.js
+└── templates/
+    ├── login.html
+    ├── register.html
+    ├── pending.html
+    ├── chat.html
+    ├── admin.html
+    ├── topic.html
+    ├── relationship.html
+    ├── reward.html
+    ├── blocked.html
+    └── partials/
+        ├── header.html
+        ├── nav.html
+        └── messages.html

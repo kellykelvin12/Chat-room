@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Breaking News - Gossip</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗞️ Breaking News</h1>
+            <p class="tagline">Important announcements from administrators</p>
+        </header>
+
+        <div class="nav-tabs">
+            <a href="{{ url_for('index') }}" class="nav-tab">💬 Home</a>
+            <a href="{{ url_for('breaking') }}" class="nav-tab active">🗞️ Breaking News</a>
+        </div>
+
+        <main>
+            <div style="max-width:900px;margin:18px auto;">
+                {% if current_user.is_admin %}
+                <div style="background:var(--dark-gray);padding:14px;border-radius:8px;margin-bottom:12px;">
+                    <h4 style="margin-top:0;">Post breaking news</h4>
+                    <textarea id="breakingContent" rows="3" style="width:100%;padding:8px;border-radius:6px;background:var(--black);color:var(--white);border:1px solid var(--medium-gray);"></textarea>
+                    <div style="text-align:right;margin-top:8px;">
+                        <button id="postBreakingBtn" class="btn-success">Post</button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div id="messagesContainer" class="chat-messages">
+                    {% for item in breaking_news %}
+                        <div class="message received" data-message-id="{{ item.id }}">
+                            <div class="message-header">
+                                <span class="sender">{{ users_by_id[item.created_by].name if users_by_id.get(item.created_by) else 'Admin' }}</span>
+                                <span class="timestamp" data-timestamp="{{ item.created_at.timestamp()|int }}">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </div>
+                            <div class="message-content">{{ item.content }}</div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">No breaking news at the moment.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div data-current-room="breaking" style="display:none"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        const postBtn = document.getElementById('postBreakingBtn');
+        if(postBtn){
+            postBtn.addEventListener('click', async function(){
+                const content = document.getElementById('breakingContent').value.trim();
+                if(!content) return alert('News content required');
+                postBtn.disabled = true;
+                try{
+                    const res = await fetchWithCSRF('/api/breaking_post', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ content }) });
+                    const data = await res.json();
+                    if(data.status === 'success'){
+                        document.getElementById('breakingContent').value = '';
+                        // optimistic append (SSE will also push it)
+                        const container = document.getElementById('messagesContainer');
+                        const html = `\n<div class="message sent" data-message-id="${data.id}">\n <div class="message-header"><span class="sender">${escapeHtml(data.user_name||'Admin')}</span> <span class="timestamp" data-timestamp="${data.timestamp}">${escapeHtml(data.formatted_time||'')}</span></div>\n <div class="message-content">${escapeHtml(content)}</div>\n</div>`;
+                        container.insertAdjacentHTML('afterbegin', html);
+                    } else {
+                        alert('Failed to post: ' + (data.message||'Unknown'));
+                    }
+                }catch(e){
+                    console.error(e);
+                    alert('Failed to post breaking news');
+                }finally{ postBtn.disabled = false }
+            });
+        }
+    });
+    </script>
+</body>
+</html>

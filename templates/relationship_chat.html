@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Relationship Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .alert {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        :root {
+            --warning-bg: rgba(255, 193, 7, 0.2);
+            --warning-text: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chat about {{ relationship.person1 }}{% if relationship.person2 %} & {{ relationship.person2 }}{% endif %}</h1>
+            <a href="{{ url_for('relationships') }}" style="color: var(--light-blue); text-decoration: none;">← Back to Relationships</a>
+        </header>
+        
+        <div class="chat-container">
+            <div class="sidebar">
+                <!-- Identity Toggle -->
+                <div class="identity-toggle">
+                    <span class="toggle-label">Show My Identity:</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="identityToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Voice Options -->
+                <div style="margin: 15px 0;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Voice Effect:</label>
+                    <div class="voice-options">
+                        <button class="voice-option active" data-voice="normal">Normal</button>
+                        <button class="voice-option" data-voice="cartoon">Cartoon</button>
+                        <button class="voice-option" data-voice="deep">Deep</button>
+                        <button class="voice-option" data-voice="female">Female</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-area">
+                {% if forced_identity and forced_identity.must_reveal_identity %}
+                    <div class="alert alert-warning" style="background: var(--warning-bg); color: var(--warning-text); padding: 10px; margin-bottom: 15px; border-radius: 4px; text-align: center;">
+                        <strong>⚠️ Notice:</strong> An admin has required you to reveal your identity in this relationship chat. Your messages will show your real name.
+                    </div>
+                {% endif %}
+                <div class="chat-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <h3>Relationship Discussion</h3>
+                        <small class="active-badge" data-active-target="relationship:{{ relationship.id }}">Category: {{ relationship.category }} • Active now: {{ active_count if active_count is not none else 0 }} users</small>
+                        <div data-current-room="relationship:{{ relationship.id }}" style="display:none"></div>
+                    </div>
+                    {% if current_user.is_admin and current_user.admin_level == 2 %}
+                        <div class="admin-controls">
+                            <button class="btn-danger btn-xs" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-left:16px;">Delete Relationship</button>
+                            <button class="btn-primary btn-xs" onclick="showForceIdentityModal()" style="margin-left:8px;">Force Identity Reveals</button>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Force Identity Modal -->
+                {% if current_user.is_admin and current_user.admin_level == 2 %}
+                <div id="forceIdentityModal" class="modal" style="display:none;">
+                    <div class="modal-content">
+                        <h3>Force Identity Reveals</h3>
+                        <p>Force users to reveal their identity in this relationship chat:</p>
+                        <div id="userList" style="margin: 16px 0; max-height: 300px; overflow-y: auto;">
+                            <!-- User list will be populated by JavaScript -->
+                        </div>
+                        <div style="text-align: right; margin-top: 16px;">
+                            <button class="btn-secondary" onclick="closeForceIdentityModal()">Close</button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+    <script>
+    // ...existing code...
+
+    // Admin: delete relationship (and all messages)
+    function deleteRelationship(relationshipId) {
+        if (!confirm('Delete this relationship and all its messages?')) return;
+        fetchWithCSRF('/api/delete_relationship/' + relationshipId, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.href = '/relationships';
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Error: ' + err));
+    }
+    </script>
+                {% if locked %}
+                    <div class="chat-messages" id="messagesContainer">
+                        <div class="locked-overlay" style="padding:24px; text-align:center; width:100%">
+                            <h2>🔒 This relationship chat is locked</h2>
+                            <p>{{ lock_message }}</p>
+                            <div style="margin-top:12px;">
+                                <input type="password" id="unlock-password" placeholder="Enter password to unlock" style="padding:8px;width:60%;max-width:320px;">
+                            </div>
+                            <div style="margin-top:12px;">
+                                <button class="btn-primary" id="unlock-btn">Unlock</button>
+                            </div>
+                            <div id="unlock-error" style="color:#f55;margin-top:8px;display:none"></div>
+                        </div>
+                        <script>
+                            document.getElementById('unlock-btn').addEventListener('click', function(){
+                                const pw = document.getElementById('unlock-password').value || '';
+                                fetchWithCSRF('/api/unlock_room', { method: 'POST', body: JSON.stringify({ type: 'relationship', id: '{{ relationship.id }}', password: pw }) })
+                                    .then(r=>r.json())
+                                    .then(data=>{
+                                        if (data.status === 'success') {
+                                            location.reload();
+                                        } else {
+                                            const err = document.getElementById('unlock-error'); err.textContent = data.message || 'Access denied'; err.style.display = 'block';
+                                        }
+                                    })
+                                    .catch(err=>{ const e = document.getElementById('unlock-error'); e.textContent = err.message || 'Error'; e.style.display='block'; });
+                            });
+                        </script>
+                    </div>
+                {% else %}
+                    <div class="chat-messages" id="messagesContainer">
+                    {% for message in messages %}
+                    <div class="message {% if message.user_id == current_user.id %}sent{% else %}received{% endif %}" data-message-id="{{ message.id }}" data-reactions='{{ (message.reactions or "{}")|e }}'>
+                        <div class="message-header" style="display:flex;justify-content:space-between;align-items:center;">
+                            <span class="sender">
+                                {% if message.identity_revealed %}
+                                    {{ message.user.name }}
+                                {% else %}
+                                    {{ message.user.username }}
+                                {% endif %}
+                                {% if message.voice_type != 'normal' %}
+                                    <small>({{ message.voice_type }} voice)</small>
+                                {% endif %}
+                            </span>
+                            <span style="display:flex;align-items:center;gap:8px;">
+                                <span class="timestamp" data-timestamp="{{ (message.created_at.timestamp() * 1000)|int }}">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                                {% if current_user.is_admin %}
+                                    <button class="btn-danger btn-xs" style="margin-left:8px;" onclick="deleteRelationshipMessage('{{ message.id }}')">🗑️</button>
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Message actions: reply and reactions -->
+                        <div class="message-actions">
+                            <button class="message-action" onclick="replyToMessage('{{ message.id }}')" aria-label="Reply to message">
+                                <span aria-hidden="true">↩️</span> Reply
+                            </button>
+                            <button class="message-action" 
+                                    onclick="reactToMessage('{{ message.id }}', '❤️')" 
+                                    data-message-id="{{ message.id }}"
+                                    data-emoji="❤️"
+                                    aria-label="React with heart"
+                                    aria-pressed="{% if message.reactions and '❤️' in message.reactions and current_user.id|string in message.reactions['❤️'] %}true{% else %}false{% endif %}">
+                                <span aria-hidden="true">❤️</span>
+                            </button>
+                            <button class="message-action"
+                                    onclick="reactToMessage('{{ message.id }}', '👍')"
+                                    data-message-id="{{ message.id }}"
+                                    data-emoji="👍"
+                                    aria-label="React with thumbs up"
+                                    aria-pressed="{% if message.reactions and '👍' in message.reactions and current_user.id|string in message.reactions['👍'] %}true{% else %}false{% endif %}">
+                                <span aria-hidden="true">👍</span>
+                            </button>
+                            <span class="reaction-counts" id="reactions-{{ message.id }}" role="status" aria-live="polite">
+                                {% if message.reactions %}
+                                    {% set pairs = [] %}
+                                    {% for emoji, users in message.reactions.items() %}
+                                        {% if users|length > 0 %}
+                                            {% set pairs = pairs + [emoji ~ ' ' ~ users|length] %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ pairs|join(' • ') }}
+                                {% endif %}
+                            </span>
+                        </div>
+
+    <script>
+    // ...existing code...
+
+    // Admin: delete relationship message
+    function deleteRelationshipMessage(messageId) {
+        if (!confirm('Delete this message?')) return;
+        fetchWithCSRF('/api/delete_relationship_message/' + messageId, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Error: ' + err));
+    }
+    </script>
+                        {% if message.content %}
+                            <div class="message-content">{{ message.content }}</div>
+                        {% endif %}
+                        {% if message.image_path %}
+                            <img src="{{ url_for('serve_upload', filename=message.image_path) }}" 
+                                 class="message-image" 
+                                 onclick="openImageModal(this.src)"
+                                 alt="Uploaded image">
+                        {% endif %}
+                        {% if message.voice_path %}
+                            <audio controls style="width: 100%; margin: 8px 0;">
+                                <source src="{{ url_for('serve_upload', filename=message.voice_path) }}" type="audio/wav">
+                                Your browser does not support audio playback.
+                            </audio>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center p-15">
+                        <p>No messages yet. Start the conversation!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="chat-input">
+                    <form id="messageForm" enctype="multipart/form-data">
+                        <input type="hidden" name="relationship_id" value="{{ relationship.id }}">
+                        <input type="hidden" name="identity_revealed" id="identityRevealed" value="false">
+                        <input type="hidden" name="voice_type" id="voiceType" value="normal">
+                        
+                        <!-- Media Upload Buttons -->
+                        <div class="media-upload">
+                            <label class="media-btn" title="Upload Image">
+                                📷
+                                <input type="file" name="image" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                            </label>
+                            
+                            <label class="media-btn" title="Upload Voice">
+                                🎤
+                                <input type="file" name="voice" accept="audio/*" style="display: none;">
+                            </label>
+                            
+                            <button type="button" class="media-btn" id="recordBtn" onclick="startRecording()" title="Record Voice">
+                                ⏺️
+                            </button>
+                        </div>
+                        
+                        <input type="text" name="content" id="messageInput" placeholder="Type your message..." required>
+                        <button type="submit">Send</button>
+                        
+                        <!-- Image Preview -->
+                        <div id="imagePreview"></div>
+                        
+                        <!-- Audio Player -->
+                        <audio id="audioPlayer" controls style="width: 100%; margin: 8px 0; display: none;"></audio>
+                    </form>
+                </div>
+            </div>
+        </div>
+                {% endif %}
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="close-modal" onclick="closeImageModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Expose current user ID for reactions
+        const currentUserId = "{{ current_user.id }}";
+        
+        // Initialize reaction counts on load
+        document.querySelectorAll('[data-message-id]').forEach(message => {
+            const messageId = message.getAttribute('data-message-id');
+            const raw = message.getAttribute('data-reactions');
+            if (raw) {
+                try {
+                    const reactions = JSON.parse(raw);
+                    updateReactionCounts(messageId, reactions);
+                } catch (e) {
+                    console.error('Failed to parse reactions for message:', messageId, e);
+                }
+            }
+        });
+
+        // Identity toggle
+        const identityToggle = document.getElementById('identityToggle');
+        const identityRevealed = document.getElementById('identityRevealed');
+        
+        // Load saved state
+        const savedIdentityState = localStorage.getItem('identityRevealed') === 'true';
+        identityToggle.checked = savedIdentityState;
+        identityRevealed.value = savedIdentityState;
+        
+        identityToggle.addEventListener('change', function() {
+            const isChecked = this.checked;
+            identityRevealed.value = isChecked;
+            localStorage.setItem('identityRevealed', isChecked);
+        });
+
+        // Voice type selection
+        const voiceOptions = document.querySelectorAll('.voice-option');
+        const voiceType = document.getElementById('voiceType');
+        
+        voiceOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                voiceOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                voiceType.value = this.getAttribute('data-voice');
+            });
+        });
+
+                // Auto-scroll to bottom of messages
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Setup message form handler
+        const messageForm = document.getElementById('messageForm');
+        if (messageForm) {
+            messageForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                try {
+                    const formData = new FormData(this);
+                    const response = await fetchWithCSRF('/api/send_relationship_message', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        // Clear form and reload messages
+                        document.getElementById('messageInput').value = '';
+                        document.getElementById('imagePreview').innerHTML = '';
+                        const audioPlayer = document.getElementById('audioPlayer');
+                        if (audioPlayer) {
+                            audioPlayer.style.display = 'none';
+                        }
+                        
+                        // Reload to show new message
+                        location.reload();
+                    } else {
+                        alert('Error sending message: ' + (data.message || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    alert('Error sending message: ' + error.message);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

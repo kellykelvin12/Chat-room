@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Gossip of Athi River Secondary School{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <!-- Global Register Info Modal (appears before navigating to /register) -->
+    <div id="globalRegisterInfoModal" class="modal" style="display:none;">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="globalRegisterInfoTitle" style="max-width:720px;background:var(--dark-gray);padding:20px;border-radius:10px;">
+            <button id="globalCloseRegisterInfo" aria-label="Close" style="float:right;background:none;border:none;color:var(--light-gray);font-size:20px;cursor:pointer;">×</button>
+            <h3 id="globalRegisterInfoTitle" style="margin-top:0;color:var(--light-blue);">Why we ask for details</h3>
+            <p style="color:var(--white);line-height:1.4">The reason as to why we are asking for many details about yourself is to prevent unauthorized people e.g. teachers from accessing your private information — as they won't be able to log in and pretend to be students. Make sure you provide correct information or else you might be blocked. Your information is safe with us. Have fun.</p>
+            <div style="text-align:right;margin-top:12px;">
+                <button id="globalCancelRegisterInfo" class="btn-secondary" style="margin-right:8px;padding:8px 12px;border-radius:6px;">Cancel</button>
+                <button id="globalConfirmRegisterInfo" class="btn-success" style="padding:8px 12px;border-radius:6px;">I Understand — Continue</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Add CSRF token to all AJAX requests
+        document.addEventListener('DOMContentLoaded', function() {
+            let token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            document.querySelectorAll('form').forEach(form => {
+                if (!form.querySelector('input[name="csrf_token"]')) {
+                    let input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    input.value = token;
+                    form.appendChild(input);
+                }
+            });
+        });
+    </script>
+    <script>
+        // Global handler to intercept any link to the register route and show info modal before navigating
+        // Also show modal on direct /register page load (once per session unless cleared)
+        (function(){
+            function isRegisterHref(href){
+                if (!href) return false;
+                try{
+                    // Normalize and check path segment
+                    const url = new URL(href, window.location.origin);
+                    return url.pathname.replace(/\/+$/, '') === '/register';
+                } catch(e){
+                    return href.indexOf('/register') !== -1;
+                }
+            }
+
+            const modal = document.getElementById('globalRegisterInfoModal');
+            const confirmBtn = document.getElementById('globalConfirmRegisterInfo');
+            const cancelBtn = document.getElementById('globalCancelRegisterInfo');
+            const closeBtn = document.getElementById('globalCloseRegisterInfo');
+            let pendingHref = null;
+            const ACCEPT_KEY = 'registerInfoAccepted';
+
+            if (!modal) return;
+
+            function showModal(){ modal.style.display = 'flex'; modal.style.alignItems = 'center'; modal.style.justifyContent = 'center'; }
+            function hideModal(){ modal.style.display = 'none'; }
+
+            // Intercept clicks on links anywhere in the document
+            document.addEventListener('click', function(e){
+                const a = e.target.closest && e.target.closest('a');
+                if (!a) return;
+                const href = a.getAttribute('href');
+                if (isRegisterHref(href)){
+                    e.preventDefault();
+                    pendingHref = href;
+                    // If user already accepted in this session, navigate immediately
+                    if (sessionStorage.getItem(ACCEPT_KEY) === 'true'){
+                        window.location.href = href;
+                        return;
+                    }
+                    showModal();
+                }
+            });
+
+            // If user navigated directly to /register, show modal on load (unless accepted this session)
+            document.addEventListener('DOMContentLoaded', function(){
+                const path = window.location.pathname.replace(/\/+$/, '');
+                if (path === '/register'){
+                    if (sessionStorage.getItem(ACCEPT_KEY) !== 'true'){
+                        // show modal; if user cancels, go back to referrer or home
+                        pendingHref = null; // no pending navigation
+                        showModal();
+                    }
+                }
+            });
+
+            confirmBtn && confirmBtn.addEventListener('click', function(){
+                // Mark accepted for this session so we don't show again
+                try{ sessionStorage.setItem(ACCEPT_KEY, 'true'); }catch(e){}
+                hideModal();
+                if (pendingHref) window.location.href = pendingHref;
+            });
+
+            cancelBtn && cancelBtn.addEventListener('click', function(){
+                hideModal();
+                // If user is on /register and cancelled, navigate back if possible
+                const path = window.location.pathname.replace(/\/+$/, '');
+                if (path === '/register'){
+                    if (document.referrer && document.referrer.indexOf(window.location.origin) === 0){
+                        window.location.href = document.referrer;
+                    } else {
+                        window.location.href = '/';
+                    }
+                }
+            });
+
+            closeBtn && closeBtn.addEventListener('click', function(){ hideModal(); });
+            modal.addEventListener('click', function(ev){ if (ev.target === modal) hideModal(); });
+        })();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Private Chats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Private Chats</h1>
+            <a href="{{ url_for('admin') }}">← Admin</a>
+        </header>
+
+        <div style="margin-top:20px;">
+            {% for chat in chats %}
+                <div style="background:var(--dark-gray); padding:12px; margin:8px 0; border-radius:8px;">
+                <span class="lock-dot {% if chat.is_locked %}locked-dot{% else %}unlocked-dot{% endif %}"></span>
+                <strong>User:</strong> {{ users_by_id.get(chat.user_id).username if users_by_id.get(chat.user_id) else chat.user_id }}<br>
+</style>
+<style>
+.lock-dot {
+    display:inline-block;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    margin-right:6px;
+    vertical-align:middle;
+    border:1px solid #888;
+}
+.locked-dot {
+    background:#e74c3c;
+}
+.unlocked-dot {
+    background:#27ae60;
+}
+</style>
+                <small>Started: {{ chat.created_at.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                <div style="margin-top:8px;">
+                    <a href="{{ url_for('private_chat', chat_id=chat.id) }}" class="btn-success btn-sm">Open</a>
+                    <button class="btn-secondary btn-sm" onclick="showLockModal('private_chat','{{ chat.id }}', '{{ chat.is_locked }}')">🔒 Lock</button>
+                </div>
+            </div>
+            {% else %}
+            <p>No private chats.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Chat with Admin - Gossip of Athi River Secondary School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chat with Admin <span id="chat-active-badge" class="active-badge" data-active-target="chat:{{ chat.id }}" style="margin-left:10px;">Active: —</span></h1>
+            <div data-current-room="chat:{{ chat.id }}" style="display:none"></div>
+            <a href="{{ url_for('index') }}" class="btn-secondary">← Back</a>
+        </header>
+
+        <div class="chat-messages" id="messagesContainer">
+            {% for message in messages %}
+                <div class="message {% if message.user_id == current_user.id %}sent{% else %}received{% endif %}" data-message-id="{{ message.id }}">
+                    <div class="message-header">
+                        <span class="sender">{{ 'You' if message.user_id == current_user.id else 'Admin' }}</span>
+                        <span class="timestamp" data-timestamp="{{ (message.created_at.timestamp() * 1000)|int }}">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                    </div>
+                    <div class="message-content">{{ message.content }}</div>
+                </div>
+            {% else %}
+                <p class="empty-state">No messages yet. Start the conversation!</p>
+            {% endfor %}
+        </div>
+
+        <div class="chat-input">
+            <form id="messageForm">
+                <input type="hidden" name="chat_id" value="{{ chat.id }}">
+                <input type="text" name="content" id="messageInput" placeholder="Type your message..." required>
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('messageForm');
+        const messagesContainer = document.getElementById('messagesContainer');
+
+        // Get CSRF token
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/api/private_message', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        // Reload to show new message
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Failed to send message');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to send message');
+            }
+        });
+
+        // Scroll to bottom of messages
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- Active badge is updated by static/script.js polling /api/active_counts -->
+</body>
+</html>

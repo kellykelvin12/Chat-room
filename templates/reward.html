@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rewards - Gossip of Athi River Secondary School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='reward_wheel.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎁 Rewards & Prizes</h1>
+            <p class="tagline">Spin to win amazing rewards!</p>
+            <a href="{{ url_for('chat') }}" style="color: var(--light-blue); text-decoration: none;">← Back to Main Chat</a>
+        </header>
+
+        <!-- Rewards coming soon banner -->
+        <div class="coming-soon" style="text-align:center; padding:80px 20px;">
+            <h2 style="font-size:2rem; margin-bottom:12px;">🎁 Rewards coming soon</h2>
+            <p style="font-size:1.1rem; color:var(--light-gray);">We're working on something fun — check back later!</p>
+            <div style="margin-top:20px;">
+                <a href="{{ url_for('chat') }}" class="btn-secondary">← Back to Chat</a>
+            </div>
+        </div>
+
+        <!-- User Rewards -->
+        <div style="background: var(--dark-gray); padding: 20px; border-radius: 12px; margin-top: 30px;">
+            <h3>🏆 Your Rewards</h3>
+            <div class="rewards-list" id="rewardsList">
+                {% for reward in rewards %}
+                <div class="reward-item" id="reward-{{ reward.id }}">
+                    <div class="reward-icon">
+                        {% if reward.reward_type and 'Homework' in reward.reward_type %}📝
+                        {% elif reward.reward_type and 'Lunch' in reward.reward_type %}🍽️
+                        {% elif reward.reward_type and 'Computer' in reward.reward_type %}💻
+                        {% elif reward.reward_type and 'Front' in reward.reward_type %}🚀
+                        {% elif reward.reward_type and 'Merch' in reward.reward_type %}👕
+                        {% elif reward.reward_type and 'Recognition' in reward.reward_type %}🏅
+                        {% elif reward.reward_type and 'Gift' in reward.reward_type %}🛍️
+                        {% elif reward.reward_type and 'Pizza' in reward.reward_type %}🍕
+                        {% else %}🎁{% endif %}
+                    </div>
+                    <div class="reward-details">
+                        <strong>{{ reward.reward_type or 'Mystery Reward' }}</strong>
+                        <p>Awarded: {{ reward.awarded_at.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                        <span class="reward-status {% if reward.is_claimed %}claimed{% else %}unclaimed{% endif %}">
+                            {{ 'Claimed' if reward.is_claimed else 'Unclaimed' }}
+                        </span>
+                    </div>
+                    {% if not reward.is_claimed %}
+                    <button class="btn-success" onclick="claimReward('{{ reward.id }}')">Claim</button>
+                    {% else %}
+                    <button class="btn-secondary" disabled>Claimed</button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No rewards yet. Spin the wheel to win!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Points System -->
+        <div style="background: var(--dark-blue); padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h3>⭐ Points System</h3>
+            <div id="pointsDisplay" style="text-align: center; font-size: 2rem; margin: 15px 0;">
+                <span style="color: var(--yellow);">🪙 Loading...</span>
+            </div>
+            <p style="text-align: center;">Earn points by being active in discussions!</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                <div style="background: var(--black); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 2rem;">💬</div>
+                    <strong>+5 points</strong>
+                    <p>Per message sent</p>
+                </div>
+                <div style="background: var(--black); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 2rem;">📷</div>
+                    <strong>+10 points</strong>
+                    <p>Media upload</p>
+                </div>
+                <div style="background: var(--black); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 2rem;">👥</div>
+                    <strong>+20 points</strong>
+                    <p>Daily login</p>
+                </div>
+                <div style="background: var(--black); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 2rem;">⭐</div>
+                    <strong>+50 points</strong>
+                    <p>Topic created</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Winners -->
+        <div style="background: var(--dark-gray); padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h3>🏆 Recent Winners</h3>
+            <div id="recentWinners" class="text-center p-15">
+                <p>Loading recent winners...</p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .wheel {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            margin: 0 auto;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            border: 8px solid var(--dark-gray);
+            transform: rotate(0deg);
+            transition: transform 3s cubic-bezier(0.2, 0.8, 0.3, 1);
+        }
+        
+        <script>
+            // Disable or remove interactive reward UI since rewards are not yet active
+            document.addEventListener('DOMContentLoaded', function() {
+                const spinBtn = document.getElementById('spinWheelBtn');
+                if (spinBtn) {
+                    spinBtn.disabled = true;
+                    spinBtn.innerText = '🎯 Rewards coming soon';
+                }
+                const wheel = document.getElementById('rewardWheel');
+                if (wheel) {
+                    wheel.style.filter = 'grayscale(100%)';
+                    wheel.style.opacity = '0.6';
+                }
+                // Replace points text
+                const pointsDisplay = document.getElementById('pointsDisplay');
+                if (pointsDisplay) pointsDisplay.innerHTML = '<span style="color: var(--yellow);">🪙 Rewards coming soon</span>';
+                const userPointsDiv = document.getElementById('userPoints');
+                if (userPointsDiv) userPointsDiv.innerHTML = '';
+            });
+        </script>
+            background: var(--black);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--yellow);
+            transition: transform 0.2s ease;
+        }
+        
+        .reward-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .reward-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .reward-details {
+            flex: 1;
+        }
+        
+        .reward-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        
+        .reward-status.claimed {
+            background: var(--green);
+            color: white;
+        }
+        
+        .reward-status.unclaimed {
+            background: var(--yellow);
+            color: var(--black);
+        }
+
+        .winner-item {
+            background: var(--dark-gray);
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--light-blue);
+        }
+
+        @media (max-width: 768px) {
+            .wheel {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .wheel-section {
+                font-size: 0.7rem;
+                padding: 8px;
+            }
+            
+            .reward-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .reward-icon {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+
+    <script>
+        const wheel = document.getElementById('rewardWheel');
+        const spinBtn = document.getElementById('spinWheelBtn');
+        const resultDiv = document.getElementById('spinResult');
+        const userPointsDiv = document.getElementById('userPoints');
+        const pointsDisplay = document.getElementById('pointsDisplay');
+        let isSpinning = false;
+        let userPoints = 0;
+
+        // Load user points on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserPoints();
+            loadRecentWinners();
+        });
+
+        function loadUserPoints() {
+            fetch('/api/user_points')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        userPoints = data.points;
+                        userPointsDiv.innerHTML = `<span style="color: var(--yellow);">🪙 ${userPoints} points available</span>`;
+                        pointsDisplay.innerHTML = `<span style="color: var(--yellow);">🪙 ${userPoints} points</span>`;
+                        
+                        // Update spin button based on points
+                        if (userPoints < 10) {
+                            spinBtn.disabled = true;
+                            spinBtn.innerHTML = '🎯 Need 10 points to spin';
+                            spinBtn.title = 'You need at least 10 points to spin the wheel';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading points:', error);
+                    userPointsDiv.innerHTML = '<span style="color: var(--red);">Error loading points</span>';
+                });
+        }
+
+        function loadRecentWinners() {
+            // This would typically come from an API endpoint
+            // For now, we'll simulate some recent winners
+            const recentWinners = [
+                { name: "ChatterBox23", reward: "Free Homework Pass", time: "2 hours ago" },
+                { name: "GossipQueen", reward: "Extra Computer Time", time: "5 hours ago" },
+                { name: "SecretAdmirer", reward: "Front Line Pass", time: "1 day ago" },
+                { name: "SchoolStar", reward: "School Merch Pack", time: "2 days ago" }
+            ];
+
+            const winnersHtml = recentWinners.map(winner => `
+                <div class="winner-item">
+                    <strong>${winner.name}</strong> won <em>${winner.reward}</em>
+                    <small style="color: var(--light-gray); display: block;">${winner.time}</small>
+                </div>
+            `).join('');
+
+            document.getElementById('recentWinners').innerHTML = winnersHtml;
+        }
+
+        spinBtn.addEventListener('click', function() {
+            if (isSpinning) return;
+            
+            // Check if user has enough points
+            if (userPoints < 10) {
+                alert('You need at least 10 points to spin the wheel!');
+                return;
+            }
+            
+            isSpinning = true;
+            spinBtn.disabled = true;
+            resultDiv.innerHTML = '<div style="text-align: center; color: var(--light-blue);">Spinning... 🎡</div>';
+            
+            // Random rotation (3-5 full rotations + random angle)
+            const degrees = 1080 + Math.floor(Math.random() * 720);
+            wheel.style.transform = `rotate(${degrees}deg)`;
+            
+            setTimeout(() => {
+                const normalizedDegrees = degrees % 360;
+                const rewards = [
+                    "Free Homework Pass",
+                    "Lunch with Favorite Teacher",
+                    "Extra Computer Time (30 mins)",
+                    "Front of Lunch Line Pass",
+                    "School Merchandise Pack",
+                    "Special Recognition Certificate",
+                    "₵20 Gift Card",
+                    "Pizza Party for Your Class"
+                ];
+                
+                const segmentSize = 360 / rewards.length;
+                const rewardIndex = Math.floor(normalizedDegrees / segmentSize);
+                const reward = rewards[rewardIndex];
+                
+                // Save the reward via API
+                fetch('/api/add_reward', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        reward_type: reward
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        resultDiv.innerHTML = `
+                            <div class="reward-notification" style="animation: pulse 2s infinite;">
+                                🎉 Congratulations! You won: <strong>${reward}</strong>
+                                <br><small>The reward has been added to your account!</small>
+                            </div>
+                        `;
+                        
+                        // Update points (subtract 10 for spin)
+                        userPoints -= 10;
+                        loadUserPoints();
+                        
+                        // Reload the page after 3 seconds to show new reward
+                        setTimeout(() => {
+                            location.reload();
+                        }, 3000);
+                    } else {
+                        resultDiv.innerHTML = `<div style="color: var(--red); text-align: center;">Error saving reward: ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `<div style="color: var(--red); text-align: center;">Network error: ${error}</div>`;
+                })
+                .finally(() => {
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                });
+                
+            }, 3000);
+        });
+
+        function claimReward(rewardId) {
+            if (confirm('Are you sure you want to claim this reward? This action cannot be undone.')) {
+                const rewardElement = document.getElementById('reward-' + rewardId);
+                const claimBtn = rewardElement.querySelector('button');
+                
+                // Show loading state
+                claimBtn.textContent = 'Claiming...';
+                claimBtn.disabled = true;
+                
+                fetch(`/api/claim_reward/${rewardId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update UI
+                        const statusSpan = rewardElement.querySelector('.reward-status');
+                        statusSpan.textContent = 'Claimed';
+                        statusSpan.className = 'reward-status claimed';
+                        claimBtn.textContent = 'Claimed';
+                        claimBtn.className = 'btn-secondary';
+                        claimBtn.disabled = true;
+                        
+                        // Show success message
+                        showTempMessage('✅ Reward claimed successfully!', 'success');
+                    } else {
+                        showTempMessage('❌ Error claiming reward: ' + data.message, 'error');
+                        claimBtn.textContent = 'Claim';
+                        claimBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    showTempMessage('❌ Network error: ' + error, 'error');
+                    claimBtn.textContent = 'Claim';
+                    claimBtn.disabled = false;
+                });
+            }
+        }
+
+        function showTempMessage(message, type) {
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: bold;
+                z-index: 1000;
+                animation: slideInRight 0.3s ease;
+                ${type === 'success' ? 'background: var(--green);' : 'background: var(--red);'}
+            `;
+            tempDiv.textContent = message;
+            document.body.appendChild(tempDiv);
+            
+            setTimeout(() => {
+                tempDiv.remove();
+            }, 3000);
+        }
+
+        // Add CSS for animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

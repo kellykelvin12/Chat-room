@@ -1,0 +1,29 @@
+{
+  "topics": {
+    "topic:1c218cde-9885-4b0f-a7b1-32e09eaa5756": {
+      "identity": true,
+      "voice": "normal",
+      "remember": true
+    },
+    "topic:f4993a2a-c1e5-44b3-beff-d005dd45a22b": {
+      "identity": false,
+      "voice": "deep",
+      "remember": true
+    },
+    "topic:c1497b23-ad6e-4768-91f0-918e091950a8": {
+      "identity": false,
+      "voice": "deep",
+      "remember": true
+    },
+    "topic:32910fb4-421d-4aaf-a555-7ea3a699228a": {
+      "identity": false,
+      "voice": "deep",
+      "remember": true
+    }
+  },
+  "global": {
+    "identity": false,
+    "voice": "deep",
+    "remember": true
+  }
+}

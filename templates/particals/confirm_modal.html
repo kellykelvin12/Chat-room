@@ -1,0 +1,19 @@
+<div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" style="display:none;">
+  <div class="modal-content" style="max-width:480px;margin:120px auto;padding:20px;background:#111;border-radius:8px;color:#fff;">
+    <h3 id="confirmModalTitle">Confirm</h3>
+    <p id="confirmModalBody">Are you sure?</p>
+    <div style="text-align:right;margin-top:20px;">
+      <button id="confirmCancel" class="btn-primary" style="background:#555;margin-right:8px;">Cancel</button>
+      <button id="confirmOk" class="btn-primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal { position: fixed; left:0; right:0; top:0; bottom:0; background: rgba(0,0,0,0.6); z-index:9999; }
+</style>
+<style>
+/* Ensure modal overlay does not block pointer-events when hidden */
+.modal { pointer-events: none; }
+.modal.open { pointer-events: auto; }
+</style>

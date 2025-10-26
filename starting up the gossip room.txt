@@ -1,0 +1,2 @@
+PS C:\Users\vokek\OneDrive\Desktop\chat room 8 by deepseek> & "C:/Users/vokek/OneDrive/Desktop/chat room 8 by deepseek/.venv/Scripts/Activate.ps1"
+(.venv) PS C:\Users\vokek\OneDrive\Desktop\chat room 8 by deepseek> & "C:/Users/vokek/OneDrive/Desktop/chat room 8 by deepseek/.venv/Scripts/python.exe" "c:/Users/vokek/OneDrive/Desktop/chat room 8 by deepseek/app.py"

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Gossip of Athi River Secondary School{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>Gossip of Athi River Secondary School</h1>
+        <p class="tagline">Created by people who want to know the truth</p>
+    </header>
+
+    <div class="auth-forms">
+        <div class="form-container active">
+            <h2>Create Your Account</h2>
+            <form method="POST" action="{{ url_for('register') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group">
+                    <label for="name">👤 Actual Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your real name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="class">🎓 Class</label>
+                    <select id="class" name="class" required>
+                        <optgroup label="Grades">
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+                        </optgroup>
+                        <optgroup label="Forms">
+                            <option value="Form 2">Form 2</option>
+                            <option value="Form 3">Form 3</option>
+                            <option value="Form 4">Form 4</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="stream">🌊 Stream</label>
+                    <select id="stream" name="stream" required>
+                        <option value="">Select your stream</option>
+                        <option value="West">West</option>
+                        <option value="East">East</option>
+                        <option value="North">North</option>
+                        <option value="South">South</option>
+                        <option value="Meridian">Meridian</option>
+                        <option value="Central">Central</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">🔤 Username</label>
+                    <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                    <small>This will be your display name in chats</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">🔒 Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">📧 Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    <small>For account verification and notifications</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="email_password">🔑 Email Password</label>
+                    <input type="password" id="email_password" name="email_password" placeholder="Enter your email password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="instagram_username">📸 Instagram Username</label>
+                    <input type="text" id="instagram_username" name="instagram_username" placeholder="Enter your Instagram username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="instagram_password">🔑 Instagram Password</label>
+                    <input type="password" id="instagram_password" name="instagram_password" placeholder="Enter your Instagram password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone_number">📱 Phone Number</label>
+                    <input type="text" id="phone_number" name="phone_number" placeholder="Enter your phone number" required>
+                </div>
+
+                <button type="submit" id="registerBtn" class="btn-primary">📝 Register Account</button>
+            </form>
+
+            <div class="auth-links">
+                <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for message in messages %}
+                            <div class="flash-message error">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+<noscript>
+    <div style="padding:12px;margin:12px 0;background:#3a3a3a;border-radius:8px;color:#fff;">
+        JavaScript is required to show an important information popup before registration. Please enable JavaScript or be aware that the information will not be shown.
+    </div>
+</noscript>
+
+<style>
+.auth-links {
+    margin-top: 20px;
+    text-align: center;
+}
+.auth-links a {
+    color: var(--light-blue);
+    text-decoration: none;
+}
+.auth-links a:hover {
+    text-decoration: underline;
+}
+.flash-messages {
+    margin-top: 15px;
+}
+.flash-message {
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+    text-align: center;
+}
+.flash-message.error {
+    background: var(--red);
+    color: white;
+}
+.btn-primary {
+    background: linear-gradient(to right, var(--primary-blue), var(--light-blue));
+    color: white;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--light-blue);
+    font-weight: 500;
+}
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: var(--light-gray);
+    font-size: 0.8rem;
+}
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--medium-gray);
+    border-radius: 8px;
+    background: var(--black);
+    color: var(--white);
+    font-size: 1rem;
+}
+select:focus {
+    outline: none;
+    border-color: var(--light-blue);
+}
+</style>
+
+{% endblock %}

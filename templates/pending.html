@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Pending Approval - Gossip of Athi River Secondary School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gossip of Athi River Secondary School</h1>
+            <p class="tagline">Created by people who want to know the truth</p>
+        </header>
+
+        <div class="auth-forms">
+            <div class="form-container active">
+                <div style="text-align: center; padding: 30px 20px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">⏳</div>
+                    <h2 style="color: var(--yellow); margin-bottom: 15px;">Account Pending Approval</h2>
+                    
+                    <div style="background: var(--dark-blue); padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <p>Your account registration has been submitted successfully!</p>
+                        <p style="margin: 15px 0; color: var(--light-blue);">
+                            📋 <strong>What happens next?</strong>
+                        </p>
+                        <ul style="text-align: left; color: var(--light-gray); margin: 15px 0; padding-left: 20px;">
+                            <li>Administrator will review your details</li>
+                            <li>You'll receive approval within 24 hours</li>
+                            <li>Check back later to access the gossip room</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: var(--black); padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p><strong>📞 Need help?</strong></p>
+                        <p>Have questions about your application?</p>
+                        <button onclick="confirmStartAdminChat()" class="btn-primary" style="margin-top: 10px;">💬 Talk to Admin</button>
+                    </div>
+
+                    {% include 'particals/confirm_modal.html' %}
+                    <script>
+                        async function confirmStartAdminChat() {
+                            const ok = await showConfirmModal('Start chat', 'Start a private chat with admins? This will create a support chat.');
+                            if (!ok) return;
+                            startAdminChat();
+                        }
+
+                        async function startAdminChat() {
+                            const button = document.querySelector('button[onclick="confirmStartAdminChat()"]');
+                            try {
+                                button.disabled = true;
+                                button.textContent = '💬 Starting chat...';
+                                
+                                console.log('Starting admin chat...'); // Debug log
+                                
+                                // Use the global helper which attaches the correct CSRF header
+                                const response = await fetchWithCSRF('/api/start_admin_chat', {
+                                    method: 'POST'
+                                });
+                                
+                                console.log('Response status:', response.status); // Debug log
+                                
+                                const data = await response.json();
+                                console.log('Server response:', data); // Debug log
+
+                                if (response.status === 401) {
+                                    window.location.href = '/login?next=/private_start';
+                                    return;
+                                }
+
+                                if (response.status === 429) {
+                                    const retry = data && data.retry_after ? data.retry_after : 60;
+                                    alert('You are making requests too quickly. Please wait ' + Math.ceil(retry/60) + ' minutes and try again.');
+                                    return;
+                                }
+
+                                if (!data || !data.status) {
+                                    throw new Error('Invalid response format');
+                                }
+                                
+                                if (data.status === 'success' && data.chat_id) {
+                                    const redirectUrl = data.redirect_url || `/pending_chat/${data.chat_id}`;
+                                    console.log('Redirecting to:', redirectUrl);
+                                    window.location.href = redirectUrl;
+                                } else {
+                                    throw new Error(data.message || 'Failed to start chat');
+                                }
+                            } catch (error) {
+                                console.error('Error:', error);
+                                alert('Failed to start chat: ' + error.message);
+                            } finally {
+                                button.disabled = false;
+                                button.textContent = '💬 Talk to Admin';
+                            }
+                        }
+                    </script>
+                    
+                    <a href="{{ url_for('login') }}">
+                            <button class="btn-primary" style="margin-top: 20px;">← Back to Login</button>
+                        </a>
+                
+                    <!-- Include common client scripts so showConfirmModal and fetchWithCSRF are available -->
+                    <script src="{{ url_for('static', filename='script.js') }}"></script>
+                </div>
+                
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="flash-messages">
+                            {% for message in messages %}
+                                <div class="flash-message warning">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .flash-messages {
+            margin-top: 15px;
+        }
+        
+        .flash-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            text-align: center;
+        }
+        
+        .flash-message.warning {
+            background: var(--yellow);
+            color: var(--black);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary-blue), var(--light-blue));
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        ul li {
+            margin-bottom: 8px;
+        }
+    </style>
+</body>
+</html>

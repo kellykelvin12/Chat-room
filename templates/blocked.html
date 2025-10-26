@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Account Blocked - River School Gossip</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚫 Account Temporarily Blocked</h1>
+            <p class="tagline">Gossip of Athi River Secondary School</p>
+        </header>
+
+        <div class="auth-forms">
+            <div class="form-container active">
+                <div style="text-align: center; padding: 30px 20px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🚫</div>
+                    <h2 style="color: var(--red); margin-bottom: 15px;">Account Restricted</h2>
+                    
+                    <div style="background: var(--black); padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <p><strong>Reason for Block:</strong></p>
+                        <p style="color: var(--light-gray); margin: 10px 0;">{{ reason or "Violation of community guidelines" }}</p>
+                    </div>
+                    
+                    <p style="margin: 20px 0;">
+                        Your account has been temporarily suspended from accessing the gossip room.
+                    </p>
+                    
+                    <div style="background: var(--dark-blue); padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p><strong>📞 Contact Administrator:</strong></p>
+                        <p>If you believe this is a mistake, please contact the school administrator.</p>
+                            <button onclick="startAdminChat()" class="btn-primary" style="margin-top: 10px;">💬 Appeal to Admin</button>
+                    </div>
+                    
+                        <script>
+                            async function startAdminChat() {
+                                try {
+                                    const response = await fetch('/api/start_admin_chat', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRFToken': '{{ csrf_token() }}',
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        },
+                                        credentials: 'same-origin'
+                                    });
+                                    
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        if (data.status === 'success') {
+                                            window.location.href = '/blocked_chat/' + data.chat_id;
+                                        } else {
+                                            alert('Failed to start chat');
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.error('Error:', error);
+                                    alert('Failed to start chat');
+                                }
+                            }
+                        </script>
+
+                    <a href="{{ url_for('logout') }}">
+                        <button class="btn-secondary">Return to Login</button>
+                    </a>
+                </div>
+                
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div style="color: var(--red); margin-top: 15px; text-align: center;">
+                            {% for message in messages %}
+                                {{ message }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

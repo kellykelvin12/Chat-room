@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gossip of Athi River Secondary School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gossip of Athi River Secondary School</h1>
+            <p class="tagline">Created by people who want to know the truth</p>
+        </header>
+
+        <div class="auth-forms">
+            <div class="form-container active">
+                <h2>Login to Gossip Room</h2>
+                <form method="POST" action="{{ url_for('login') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="username">👤 Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">🔒 Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">🚪 Login</button>
+                </form>
+                
+                <div class="auth-links">
+                    <p>Don't have an account? <a href="{{ url_for('register') }}" id="registerLink">Register here</a></p>
+                    <p>Admin access? <a href="{{ url_for('admin_login') }}">Admin Login</a></p>
+                </div>
+                
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="flash-messages">
+                            {% for message in messages %}
+                                <div class="flash-message error">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .auth-links {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .auth-links a {
+            color: var(--light-blue);
+            text-decoration: none;
+        }
+        
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .flash-messages {
+            margin-top: 15px;
+        }
+        
+        .flash-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            text-align: center;
+        }
+        
+        .flash-message.error {
+            background: var(--red);
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary-blue), var(--light-blue));
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--light-blue);
+            font-weight: 500;
+        }
+    </style>
+    <!-- Register link now uses global modal defined in base.html -->
+</body>
+</html>

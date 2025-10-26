@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Private Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Private Chat with Admin <span id="chat-active-badge" class="active-badge" data-active-target="chat:{{ chat.id }}" style="margin-left:10px;">Active: —</span></h1>
+            <div data-current-room="chat:{{ chat.id }}" style="display:none"></div>
+            <a href="{{ url_for('chat') }}">← Back</a>
+        </header>
+
+        {% if locked %}
+            <div class="chat-messages" id="messagesContainer">
+                <div class="locked-overlay" style="padding:24px; text-align:center; width:100%">
+                    <h2>🔒 This private chat is locked</h2>
+                    <p>{{ lock_message }}</p>
+                    <div style="margin-top:12px;">
+                        <input type="password" id="unlock-password" placeholder="Enter password to unlock" style="padding:8px;width:60%;max-width:320px;">
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn-primary" id="unlock-btn">Unlock</button>
+                    </div>
+                    <div id="unlock-error" style="color:#f55;margin-top:8px;display:none"></div>
+                </div>
+                <script>
+                    document.getElementById('unlock-btn').addEventListener('click', function(){
+                        const pw = document.getElementById('unlock-password').value || '';
+                        fetchWithCSRF('/api/unlock_room', { method: 'POST', body: JSON.stringify({ type: 'private', id: '{{ chat.id }}', password: pw }) })
+                            .then(r=>r.json())
+                            .then(data=>{
+                                if (data.status === 'success') {
+                                    location.reload();
+                                } else {
+                                    const err = document.getElementById('unlock-error'); err.textContent = data.message || 'Access denied'; err.style.display = 'block';
+                                }
+                            })
+                            .catch(err=>{ const e = document.getElementById('unlock-error'); e.textContent = err.message || 'Error'; e.style.display='block'; });
+                    });
+                </script>
+            </div>
+        {% else %}
+            <div class="chat-messages" id="messagesContainer">
+                {% for m in messages %}
+                    <div class="message {% if m.user_id == current_user.id %}sent{% else %}received{% endif %}" data-message-id="{{ m.id }}">
+                        <div class="message-header">
+                            <span class="sender">{{ m.user.name if m.user else 'User' }}</span>
+                            <span class="timestamp" data-timestamp="{{ (m.created_at.timestamp() * 1000)|int }}">{{ m.created_at.strftime('%I:%M %p') }}</span>
+                        </div>
+                        <div class="message-content">{{ m.content }}</div>
+                    </div>
+                {% else %}
+                    <p>No messages yet.</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="chat-input">
+            <form id="privateMessageForm">
+                <input type="hidden" name="chat_id" value="{{ chat.id }}">
+                <input type="text" name="content" id="messageInput" placeholder="Type your message..." required>
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- Active badge is updated by static/script.js polling /api/active_counts -->
+    <script>
+        document.getElementById('privateMessageForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = new FormData(this);
+            try {
+                const res = await fetchWithCSRF('/api/private_message', { method: 'POST', body: form });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+    </script>
+</body>
+</html>

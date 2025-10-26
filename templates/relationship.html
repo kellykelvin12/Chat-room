@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Relationships - River School Gossip</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💑 Relationship Corner</h1>
+            <p class="tagline">Share and discuss relationships</p>
+            <a href="{{ url_for('chat') }}" style="color: var(--light-blue); text-decoration: none;">← Back to Main Chat</a>
+        </header>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="showCategory('dating')">💕 Currently Dating</div>
+            <div class="nav-tab" onclick="showCategory('rejected')">💔 Rejected</div>
+            <div class="nav-tab" onclick="showCategory('crushes')">😍 Crushes</div>
+            <div class="nav-tab" onclick="showCategory('broken_up')">💔💔 Broken Up</div>
+              <div class="nav-tab" onclick="showCategory('former_crushie')">🤔 Former Crushie</div>
+              <div class="nav-tab" onclick="showCategory('cheaters')">😡 Cheaters</div>
+              <div class="nav-tab" onclick="showCategory('add')">➕ Add Relationship</div>
+        </div>
+
+        <!-- Currently Dating -->
+        <div id="dating" class="relationship-category active">
+            <h3>💕 Currently Dating Couples</h3>
+            <div class="relationship-list">
+                {% for relationship in dating %}
+                <div class="relationship-item">
+                    <div class="couple-names">
+                        <strong>{{ relationship.person1 }}</strong> 💘 
+                        {% if relationship.person2 %}
+                        <strong>{{ relationship.person2 }}</strong>
+                        {% else %}
+                        <em>Secret Admirer</em>
+                        {% endif %}
+                    </div>
+                    {% if relationship.description %}
+                    <p class="relationship-desc">{{ relationship.description }}</p>
+                    {% endif %}
+                    <small>Added: {{ relationship.created_at.strftime('%b %d, %Y') }}</small>
+                    <small class="active-badge" style="display:inline-block;color:var(--white);margin-left:8px;" data-active-target="relationship:{{ relationship.id }}">Active: {{ relationship_active_counts[relationship.id]|default(0) }} users</small>
+                    <a href="{{ url_for('relationship_chat', relationship_id=relationship.id) }}" class="btn-success btn-sm" style="margin-top: 8px; margin-right: 8px;">💬 Chat</a>
+                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                    <button class="btn-danger btn-sm" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-top: 8px;">
+                        🗑️ Delete
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No dating couples to show yet. Be the first to add one!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Rejected -->
+        <div id="rejected" class="relationship-category">
+            <h3>💔 Recent Rejections</h3>
+            <div class="relationship-list">
+                {% for relationship in rejected %}
+                <div class="relationship-item">
+                    <div class="couple-names">
+                        <strong>{{ relationship.person1 }}</strong> 💔 
+                        {% if relationship.person2 %}
+                        <strong>{{ relationship.person2 }}</strong>
+                        {% else %}
+                        <em>Someone</em>
+                        {% endif %}
+                    </div>
+                    {% if relationship.description %}
+                    <p class="relationship-desc">{{ relationship.description }}</p>
+                    {% endif %}
+                    <small>Added: {{ relationship.created_at.strftime('%b %d, %Y') }}</small>
+                    <a href="{{ url_for('relationship_chat', relationship_id=relationship.id) }}" class="btn-success btn-sm" style="margin-top: 8px; margin-right: 8px;">💬 Chat</a>
+                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                    <button class="btn-danger btn-sm" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-top: 8px;">
+                        🗑️ Delete
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No rejection stories yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Crushes -->
+        <div id="crushes" class="relationship-category">
+            <h3>😍 Secret Crushes & Admirers</h3>
+            <div class="relationship-list">
+                {% for relationship in crushes %}
+                <div class="relationship-item">
+                    <div class="couple-names">
+                        <strong>{{ relationship.person1 }}</strong> 😳 
+                        {% if relationship.person2 %}
+                        <strong>{{ relationship.person2 }}</strong>
+                        {% else %}
+                        <em>Secret Crush</em>
+                        {% endif %}
+                    </div>
+                    {% if relationship.description %}
+                    <p class="relationship-desc">{{ relationship.description }}</p>
+                    {% endif %}
+                    <small>Added: {{ relationship.created_at.strftime('%b %d, %Y') }}</small>
+                    <a href="{{ url_for('relationship_chat', relationship_id=relationship.id) }}" class="btn-success btn-sm" style="margin-top: 8px; margin-right: 8px;">💬 Chat</a>
+                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                    <button class="btn-danger btn-sm" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-top: 8px;">
+                        🗑️ Delete
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No crush stories yet. Share the first one!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Broken Up -->
+        <div id="broken_up" class="relationship-category">
+            <h3>💔💔 Broken Up</h3>
+            <div class="relationship-list">
+                {% for relationship in broken_up %}
+                <div class="relationship-item">
+                    <div class="couple-names">
+                        <strong>{{ relationship.person1 }}</strong> 💔💔 
+                        {% if relationship.person2 %}
+                        <strong>{{ relationship.person2 }}</strong>
+                        {% else %}
+                        <em>Unknown</em>
+                        {% endif %}
+                    </div>
+                    {% if relationship.description %}
+                    <p class="relationship-desc">{{ relationship.description }}</p>
+                    {% endif %}
+                    <small>Added: {{ relationship.created_at.strftime('%b %d, %Y') }}</small>
+                    <a href="{{ url_for('relationship_chat', relationship_id=relationship.id) }}" class="btn-success btn-sm" style="margin-top: 8px; margin-right: 8px;">💬 Chat</a>
+                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                    <button class="btn-danger btn-sm" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-top: 8px;">
+                        🗑️ Delete
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No break up stories yet. Share the first one!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Former Crushie -->
+        <div id="former_crushie" class="relationship-category">
+            <h3>🤔 Former Crushes</h3>
+            <div class="relationship-list">
+                {% for relationship in former_crushie %}
+                <div class="relationship-item">
+                    <div class="couple-names">
+                        <strong>{{ relationship.person1 }}</strong> used to like 
+                        {% if relationship.person2 %}
+                        <strong>{{ relationship.person2 }}</strong>
+                        {% else %}
+                        <em>Someone</em>
+                        {% endif %}
+                    </div>
+                    {% if relationship.description %}
+                    <p class="relationship-desc">{{ relationship.description }}</p>
+                    {% endif %}
+                    <small>Added: {{ relationship.created_at.strftime('%b %d, %Y') }}</small>
+                    <small class="active-badge" style="display:inline-block;color:var(--white);margin-left:8px;" data-active-target="relationship:{{ relationship.id }}">Active: {{ relationship_active_counts[relationship.id]|default(0) }} users</small>
+                    <a href="{{ url_for('relationship_chat', relationship_id=relationship.id) }}" class="btn-success btn-sm" style="margin-top: 8px; margin-right: 8px;">💬 Chat</a>
+                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                    <button class="btn-danger btn-sm" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-top: 8px;">
+                        🗑️ Delete
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No former crushes listed yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Cheaters -->
+        <div id="cheaters" class="relationship-category">
+            <h3>😡 Cheaters</h3>
+            <div class="relationship-list">
+                {% for relationship in cheaters %}
+                <div class="relationship-item">
+                    <div class="couple-names">
+                        <strong>{{ relationship.person1 }}</strong> 😡 
+                        {% if relationship.person2 %}
+                        <strong>{{ relationship.person2 }}</strong>
+                        {% else %}
+                        <em>Unknown</em>
+                        {% endif %}
+                    </div>
+                    {% if relationship.description %}
+                    <p class="relationship-desc">{{ relationship.description }}</p>
+                    {% endif %}
+                    <small>Added: {{ relationship.created_at.strftime('%b %d, %Y') }}</small>
+                    <a href="{{ url_for('relationship_chat', relationship_id=relationship.id) }}" class="btn-success btn-sm" style="margin-top: 8px; margin-right: 8px;">💬 Chat</a>
+                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                    <button class="btn-danger btn-sm" onclick="deleteRelationship('{{ relationship.id }}')" style="margin-top: 8px;">
+                        🗑️ Delete
+                    </button>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center p-15">
+                    <p>No cheater stories yet. Share the first one!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Add Relationship -->
+        <div id="add" class="relationship-category">
+            <h3>➕ Add New Relationship</h3>
+            <div class="auth-forms">
+                <form id="addRelationshipForm">
+                    <div class="form-group">
+                        <label for="relationshipCategory">Category</label>
+                        <select id="relationshipCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="dating">💕 Currently Dating</option>
+                            <option value="rejected">💔 Rejected</option>
+                            <option value="crushes">😍 Crushes</option>
+                            <option value="broken_up">💔💔 Broken Up</option>
+                           <option value="former_crushie">🤔 Former Crushie</option>
+                           <option value="cheaters">😡 Cheaters</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="person1">Person 1 Name *</label>
+                        <input type="text" id="person1" placeholder="Enter first person's name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="person2">Person 2 Name (Optional)</label>
+                        <input type="text" id="person2" placeholder="Enter second person's name (optional)">
+                        <small style="color: var(--light-gray);">Leave blank for secret admirers/crushes</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="relationshipDescription">Description (Optional)</label>
+                        <textarea id="relationshipDescription" placeholder="Add details about this relationship..." rows="4"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-success">➕ Add Relationship</button>
+                    <div id="formMessage" style="margin-top: 10px;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .relationship-category {
+            display: none;
+        }
+        .relationship-category.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+        .relationship-item {
+            background: var(--dark-gray);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid var(--purple);
+            position: relative;
+        }
+        .couple-names {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        .relationship-desc {
+            color: var(--light-gray);
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--light-blue);
+            font-weight: 500;
+        }
+        .form-group small {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+
+    <script>
+        function showCategory(category) {
+            document.querySelectorAll('.relationship-category').forEach(cat => {
+                cat.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(category).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        document.getElementById('addRelationshipForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const category = document.getElementById('relationshipCategory').value;
+            const person1 = document.getElementById('person1').value.trim();
+            const person2 = document.getElementById('person2').value.trim();
+            const description = document.getElementById('relationshipDescription').value.trim();
+            const formMessage = document.getElementById('formMessage');
+            
+            // Validate form
+            if (!category || !person1) {
+                formMessage.innerHTML = '<div style="color: var(--red);">Please fill in all required fields.</div>';
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Adding...';
+            submitBtn.disabled = true;
+            
+            // Make API call
+                fetchWithCSRF('/api/add_relationship', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        category: category,
+                        person1: person1,
+                        person2: person2,
+                        description: description,
+                        csrf_token: getCSRFToken()
+                    })
+                })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    formMessage.innerHTML = '<div style="color: var(--green);">✅ Relationship added successfully!</div>';
+                    this.reset();
+                    
+                    // Redirect to the appropriate category after 2 seconds
+                    setTimeout(() => {
+                        showCategory(category);
+                        location.reload();
+                    }, 2000);
+                } else {
+                    formMessage.innerHTML = `<div style="color: var(--red);">❌ Error: ${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                formMessage.innerHTML = `<div style="color: var(--red);">❌ Network error: ${error}</div>`;
+            })
+            .finally(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        function deleteRelationship(relationshipId) {
+            if (confirm('Are you sure you want to delete this relationship entry? This action cannot be undone.')) {
+                // Since we don't have a specific delete endpoint for relationships,
+                // we'll need to add one. For now, we'll show a message.
+                alert('Delete functionality would be implemented here. Relationship ID: ' + relationshipId);
+                
+                // In a full implementation, you would call:
+                // fetch(`/api/delete_relationship/${relationshipId}`, { method: 'DELETE' })
+                // .then(response => response.json())
+                // .then(data => {
+                //     if (data.status === 'success') {
+                //         location.reload();
+                //     }
+                // });
+            }
+        }
+
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Add some sample data if empty (for demonstration)
+        document.addEventListener('DOMContentLoaded', function() {
+            // This is just for demonstration - in production, data comes from the backend
+            console.log('Relationship page loaded');
+            
+            // You could add functionality to refresh data periodically
+            setInterval(() => {
+                // Auto-refresh relationships every 30 seconds
+                // location.reload(); // Uncomment if you want auto-refresh
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

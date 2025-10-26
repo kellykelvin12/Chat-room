@@ -1,0 +1,59 @@
+<header>
+    <h1>Gossip of Athi River Secondary School</h1>
+    <p class="tagline">Created by people who want to know the truth</p>
+    {% if current_user.is_authenticated %}
+        <div class="user-welcome">
+            Welcome, <strong>{{ current_user.name }}</strong> ({{ current_user.class_name }})
+            {% if current_user.status == 'approved' %}
+                <span class="status-badge approved">✅ Approved</span>
+            {% elif current_user.status == 'pending' %}
+                <span class="status-badge pending">⏳ Pending</span>
+            {% elif current_user.status == 'blocked' %}
+                <span class="status-badge blocked">🚫 Blocked</span>
+            {% endif %}
+            {% if show_active_users %}
+                <div style="display:inline-block; margin-left:20px; font-weight:600;">
+                    <span class="active-badge" id="global-active-badge">
+                        <span class="active-dot" id="global-active-dot">●</span>
+                        <span id="global-active-count">{{ ('Active now: ' + (active_user_count|string) + ' users') if active_user_count is not none else 'Active now: — users' }}</span>
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</header>
+
+<style>
+    .user-welcome {
+        margin-top: 10px;
+        padding: 10px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        display: inline-block;
+    }
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin-left: 10px;
+    }
+    .status-badge.approved {
+        background: var(--green);
+        color: white;
+    }
+    .status-badge.pending {
+        background: var(--yellow);
+        color: var(--black);
+    }
+    .status-badge.blocked {
+        background: var(--red);
+        color: white;
+    }
+</style>
+<script src="{{ url_for('static', filename='active_users.js') }}"></script>
+<style>
+    .active-badge { display:inline-flex; align-items:center; gap:8px; padding:4px 8px; border-radius:12px; background:rgba(255,255,255,0.03); }
+    .active-dot { font-size:0.9rem; line-height:1; }
+    .active-badge.online .active-dot { color: #2ecc71; }
+    .active-badge.offline .active-dot { color: #95a5a6; }
+</style>

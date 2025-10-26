@@ -1,0 +1,53 @@
+<nav class="main-nav">
+    <div class="nav-tabs">
+        <div class="nav-tab active" onclick="showSection('topics')">
+            <span class="nav-icon">📝</span>
+            <span class="nav-text">Topics</span>
+        </div>
+        <div class="nav-tab" onclick="showSection('relationships')">
+            <span class="nav-icon">💑</span>
+            <span class="nav-text">Relationships</span>
+        </div>
+        <div class="nav-tab" onclick="showSection('rewards')">
+            <span class="nav-icon">🎁</span>
+            <span class="nav-text">Rewards</span>
+        </div>
+        <div class="nav-tab" onclick="showSection('profile')">
+            <span class="nav-icon">👤</span>
+            <span class="nav-text">Profile</span>
+        </div>
+        <div class="nav-tab logout-tab">
+            <a href="{{ url_for('logout') }}">
+                <span class="nav-icon">🚪</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<style>
+    .nav-icon {
+        font-size: 1.2rem;
+        margin-right: 8px;
+    }
+    .nav-text {
+        font-size: 0.9rem;
+    }
+    .logout-tab a {
+        color: white;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    @media (max-width: 768px) {
+        .nav-text {
+            font-size: 0.8rem;
+        }
+        .nav-icon {
+            margin-right: 4px;
+            font-size: 1rem;
+        }
+    }
+</style>

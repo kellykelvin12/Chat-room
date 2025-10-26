@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ topic.name }} - Gossip of Athi River Secondary School</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{ topic.name }}</h1>
+            <p class="tagline">Topic Chat Room</p>
+            <a href="{{ url_for('chat') }}" style="color: var(--light-blue); text-decoration: none;">← Back to Topics</a>
+        </header>
+
+        <!-- Settings Modal -->
+        <div class="settings-modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+            <div class="settings-content" role="document">
+                <button class="modal-close" id="settingsCloseBtn" aria-label="Close settings">✕</button>
+                <h2 id="settingsTitle">Topic Settings</h2>
+                <div class="info-panel">
+                    <p><strong>Topic:</strong> {{ topic.title }}</p>
+                    <p><strong>Created:</strong> {{ topic.created_at.strftime('%b %d, %Y') }}</p>
+                    {% if topic.description %}
+                        <p><strong>Description:</strong> {{ topic.description }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="settings-section">
+                    <h3>Identity Settings</h3>
+                    <div class="identity-toggle">
+                        <span class="toggle-label">👤 Show My Identity:</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="identityToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    {% if forced_identity and forced_identity.must_reveal_identity %}
+                        <div class="identity-notice">
+                            <small>🔓 Admin requires identity reveal in this topic</small>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="settings-section">
+                    <h3>Voice Settings</h3>
+                    <div class="voice-options" role="list" aria-label="Voice options">
+                        <button class="voice-option active" data-voice="normal" role="button" tabindex="0" aria-pressed="true">Normal</button>
+                        <button class="voice-option" data-voice="cartoon" role="button" tabindex="0" aria-pressed="false">Cartoon</button>
+                        <button class="voice-option" data-voice="deep" role="button" tabindex="0" aria-pressed="false">Deep</button>
+                        <button class="voice-option" data-voice="female" role="button" tabindex="0" aria-pressed="false">Female</button>
+                    </div>
+                </div>
+                <div class="remember-section">
+                    <label class="remember-label">
+                        <input type="checkbox" id="rememberSettings"> Remember these settings for this topic
+                    </label>
+                </div>
+
+                <button class="enter-chat-btn" onclick="enterChat()">Enter Chat</button>
+            </div>
+        </div>
+
+        <script>
+            // Server-saved settings (if any) are injected here for front-end to pick up.
+            window.serverSavedSettings = {{ user_saved_settings|tojson }};
+        </script>
+
+        <!-- Chat Container (Initially Hidden) -->
+        <div class="chat-container" id="chatContainer" style="display: none;">
+            {% if locked %}
+                <!-- When locked we intentionally do NOT render messages or inputs for unauthorized users -->
+                <div class="locked-overlay" style="padding:24px; text-align:center;">
+                    <h2>🔒 This topic is locked</h2>
+                    <p>{{ lock_message }}</p>
+                    <div style="margin-top:12px;">
+                        <input type="password" id="unlock-password" placeholder="Enter password to unlock" style="padding:8px;width:60%;max-width:320px;">
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn-primary" id="unlock-btn">Unlock</button>
+                    </div>
+                    <div id="unlock-error" style="color:#f55;margin-top:8px;display:none"></div>
+                </div>
+                <script>
+                    document.getElementById('unlock-btn').addEventListener('click', function(){
+                        const pw = document.getElementById('unlock-password').value || '';
+                        fetchWithCSRF('/api/unlock_room', { method: 'POST', body: JSON.stringify({ type: 'topic', id: '{{ topic.id }}', password: pw }) })
+                            .then(r=>r.json())
+                            .then(data=>{
+                                if (data.status === 'success') {
+                                    location.reload();
+                                } else {
+                                    const err = document.getElementById('unlock-error'); err.textContent = data.message || 'Access denied'; err.style.display = 'block';
+                                }
+                            })
+                            .catch(err=>{ const e = document.getElementById('unlock-error'); e.textContent = err.message || 'Error'; e.style.display='block'; });
+                    });
+                </script>
+            {% else %}
+                <div class="chat-header">
+                    <button class="settings-btn" onclick="showSettings()">⚙️ Settings</button>
+                    <h3>{{ topic.title }}</h3>
+                </div>
+
+                <div class="chat-area">
+                    <div class="chat-header">
+                        <h3>{{ topic.name }}</h3>
+                        <small class="active-badge" data-active-target="topic:{{ topic.id }}">Active now: {{ active_count if active_count is not none else 0 }} users</small>
+                        <!-- page-level room marker for presence pings -->
+                        <div data-current-room="topic:{{ topic.id }}" style="display:none"></div>
+                    </div>
+
+                    <div class="chat-messages" id="messagesContainer">
+                        {% for message in messages %}
+                            <div class="message {% if message.user_id == current_user.id %}sent{% else %}received{% endif %}" data-message-id="{{ message.id }}">
+                                <div class="message-header">
+                                    <span class="sender">
+                                        {% if message.identity_revealed %}
+                                            {{ message.user.name }}
+                                        {% else %}
+                                            {{ message.user.username }}
+                                        {% endif %}
+                                        {% if message.voice_type != 'normal' %}
+                                            <small>({{ message.voice_type }} voice)</small>
+                                        {% endif %}
+                                    </span>
+                                    <span class="timestamp" data-timestamp="{{ (message.created_at.timestamp() * 1000)|int }}">{{ message.created_at.strftime('%I:%M %p') }}</span>
+                                </div>
+                                
+                                {% if message.content %}
+                                    <div class="message-content">{{ message.content }}</div>
+                                {% endif %}
+                                
+                                {% if message.image_path %}
+                                    <img src="{{ url_for('serve_upload', filename=message.image_path) }}" 
+                                         class="message-image" 
+                                         onclick="openImageModal(this.src)"
+                                         alt="Uploaded image">
+                                {% endif %}
+                                
+                                {% if message.voice_path %}
+                                    <audio controls style="width: 100%; margin: 8px 0;">
+                                        <source src="{{ url_for('serve_upload', filename=message.voice_path) }}" type="audio/wav">
+                                        Your browser does not support audio playback.
+                                    </audio>
+                                {% endif %}
+                                
+                                <div class="message-actions">
+                                    <span class="message-action" onclick="replyToMessage('{{ message.id }}')">↩️ Reply</span>
+                                    <span class="message-action" onclick="reactToMessage('{{ message.id }}', '👍')">👍</span>
+                                    <span class="message-action" onclick="reactToMessage('{{ message.id }}', '❤️')">❤️</span>
+                                    <span class="message-action" onclick="reactToMessage('{{ message.id }}', '😂')">😂</span>
+                                    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+                                        <span class="message-action" onclick="deleteMessage('{{ message.id }}')" style="color: var(--red);">🗑️ Delete</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center p-15">
+                                <p>💬 No messages yet. Start the conversation!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="chat-input">
+                        <form id="messageForm" enctype="multipart/form-data">
+                            <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                            <input type="hidden" name="identity_revealed" id="identityRevealed" value="false">
+                            <input type="hidden" name="voice_type" id="voiceType" value="normal">
+                            
+                            <!-- Media Upload Buttons -->
+                            <div class="media-upload">
+                                <label class="media-btn" title="Upload Image">
+                                    📷
+                                    <input type="file" name="image" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                                </label>
+                                
+                                <label class="media-btn" title="Upload Voice">
+                                    🎤
+                                    <input type="file" name="voice" accept="audio/*" style="display: none;">
+                                </label>
+                                
+                                <button type="button" class="media-btn" id="recordBtn" onclick="startRecording()" title="Record Voice">
+                                    ⏺️
+                                </button>
+                            </div>
+                            
+                            <input type="text" name="content" id="messageInput" placeholder="Type your message..." required>
+                            <button type="submit">Send</button>
+                            
+                            <!-- Image Preview -->
+                            <div id="imagePreview"></div>
+                            
+                            <!-- Audio Player -->
+                            <audio id="audioPlayer" controls style="width: 100%; margin: 8px 0; display: none;"></audio>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="close-modal" onclick="closeImageModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Identity toggle
+        const identityToggle = document.getElementById('identityToggle');
+        const identityRevealed = document.getElementById('identityRevealed');
+        
+        // Load saved state
+        const savedIdentityState = localStorage.getItem('identityRevealed') === 'true';
+        identityToggle.checked = savedIdentityState;
+        identityRevealed.value = savedIdentityState;
+        
+        identityToggle.addEventListener('change', function() {
+            const isChecked = this.checked;
+            identityRevealed.value = isChecked;
+            localStorage.setItem('identityRevealed', isChecked);
+        });
+
+        // Voice type selection
+        const voiceOptions = document.querySelectorAll('.voice-option');
+        const voiceType = document.getElementById('voiceType');
+        
+        voiceOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                voiceOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                voiceType.value = this.getAttribute('data-voice');
+            });
+        });
+
+        // Message form submission
+        document.getElementById('messageForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetchWithCSRF('/api/send_message', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Clear form and reload messages
+                    document.getElementById('messageInput').value = '';
+                    document.getElementById('imagePreview').innerHTML = '';
+                    document.getElementById('audioPlayer').style.display = 'none';
+                    
+                    // In production, you would update messages via WebSocket
+                    location.reload();
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error sending message: ' + error);
+            });
+        });
+
+        // Auto-scroll to bottom of messages
+        const messagesContainer = document.getElementById('messagesContainer');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        function deleteMessage(messageId) {
+            if (confirm('Are you sure you want to delete this message?')) {
+                fetchWithCSRF(`/api/delete_message/${messageId}`, {
+                    method: 'POST'  // Changed to POST for CSRF protection
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            location.reload();
+                        } else {
+                            alert('Error deleting message: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error deleting message: ' + error);
+                    });
+            }
+        }
+
+        function replyToMessage(messageId) {
+            const message = prompt('Enter your reply:');
+            if (message) {
+                fetchWithCSRF('/api/reply_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        parent_id: messageId,
+                        content: message
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('Error sending reply: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error sending reply: ' + error);
+                });
+            }
+        }
+
+        function reactToMessage(messageId, emoji) {
+            fetchWithCSRF('/api/react_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message_id: messageId,
+                    emoji: emoji
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error adding reaction: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error adding reaction: ' + error);
+            });
+        }
+    </script>
+</body>
+</html>
