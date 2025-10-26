@@ -8,3 +8,5 @@ Pillow==10.0.0
 redis==5.0.4
 Flask-Limiter==2.9.0
 gunicorn
+setuptools==69.5.1
+wheel==0.43.0
